@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Try different language codes and methods to get transcript
-    const languagesToTry = ['en', 'en-US', 'en-GB', 'auto'];
+    const languagesToTry = ['th', 'th-TH', 'en', 'en-US', 'en-GB', 'auto'];
     let transcript = null;
-    let lastError: Error | null = null;
+    let lastError = null;
 
     for (const lang of languagesToTry) {
       try {
@@ -53,9 +53,9 @@ export async function POST(request: NextRequest) {
         if (transcript && transcript.length > 0) {
           break; // Successfully got transcript
         }
-      } catch (error: any) {
-        lastError = error;
-        console.log(`Failed to fetch transcript with lang ${lang}:`, error.message);
+      } catch (error) {
+        lastError = error as Error;
+        console.log(`Failed to fetch transcript with lang ${lang}:`, error instanceof Error ? error.message : String(error));
         continue; // Try next language
       }
     }
