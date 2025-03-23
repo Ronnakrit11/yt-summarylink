@@ -95,28 +95,26 @@ async function analyzeWithDeepSeekAI(text: string): Promise<AnalysisResponse> {
         model: 'deepseek-chat',
         messages: [
           {
-            role: "system",
-            content: "You are an expert analyst who analyzes video transcripts."
+            role: 'system',
+            content: `คุณเป็นผู้เชี่ยวชาญในการวิเคราะห์เนื้อหาวิดีโอ หน้าที่ของคุณคือวิเคราะห์บทความวิดีโอและให้บทสรุปที่มีข้อมูลเชิงลึกและมีโครงสร้างที่ดี
+
+จัดรูปแบบการตอบของคุณในรูปแบบ markdown ด้วยหัวข้อต่อไปนี้:
+1. **บทสรุป**: สรุปสั้นๆ 2-3 ประโยคว่าวิดีโอเกี่ยวกับอะไร
+2. **ประเด็นสำคัญ**: 3-5 แนวคิดหรือข้อโต้แย้งหลักที่นำเสนอในวิดีโอ
+3. **ข้อมูลเชิงลึก**: 2-3 ข้อสังเกตหรือนัยสำคัญจากเนื้อหา
+4. **กลุ่มเป้าหมาย**: ใครจะได้ประโยชน์จากวิดีโอนี้มากที่สุด
+5. **บทสรุป**: ความคิดสรุปสั้นๆ
+
+ให้การวิเคราะห์ของคุณเป็นมืออาชีพ ชัดเจน และอ่านง่าย ใช้หัวข้อ (##) สำหรับแต่ละส่วน`
           },
           {
-            role: "user",
-            content: `Analyze the following YouTube video transcript and provide:
-            1. What the video is about (core topic/subject)
-            2. 3-5 key points or insights from the video
-            3. A concise summary (2-3 paragraphs)
-            
-            Format your response as JSON with the following structure:
-            {
-              "topic": "Core topic of the video",
-              "keyPoints": ["Key point 1", "Key point 2", "Key point 3", "Key point 4", "Key point 5"],
-              "summary": "Concise summary of the video content"
-            }
-            
-            Here is the transcript: ${text}`
+            role: 'user',
+            content: `กรุณาวิเคราะห์บทความวิดีโอนี้และให้การวิเคราะห์ที่ครอบคลุม: ${text}`
           }
         ],
-        temperature: 0.7,
-        response_format: { type: "json_object" }
+        temperature: 0.5,
+        max_tokens: 1000,
+        response_format: { type: "text" }
       })
     });
 
@@ -128,18 +126,12 @@ async function analyzeWithDeepSeekAI(text: string): Promise<AnalysisResponse> {
     const data = await response.json();
     const content = data.choices[0].message.content;
     
-    // Try to parse the JSON response
-    try {
-      const parsedContent = JSON.parse(content);
-      return {
-        topic: parsedContent.topic || 'Video Analysis',
-        keyPoints: parsedContent.keyPoints || ['No specific key points identified.'],
-        summary: parsedContent.summary || 'No summary available.'
-      };
-    } catch (parseError) {
-      // If parsing fails, return an error
-      throw new Error('Failed to parse AI response. The analysis could not be completed.');
-    }
+    // Return the markdown content directly
+    return {
+      topic: "Video Analysis",
+      keyPoints: ["See full analysis below"],
+      summary: content
+    };
   } catch (error) {
     console.error('DeepSeek API error:', error);
     throw new Error('Failed to analyze transcript with DeepSeek AI. Please try again later.');
