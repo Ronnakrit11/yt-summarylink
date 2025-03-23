@@ -1,14 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { YoutubeTranscript } from 'youtube-transcript';
 
+// Configure CORS
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Add CORS headers to the response
+    const headers = {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+    };
+
     const { videoUrl } = await request.json();
     
     if (!videoUrl) {
       return NextResponse.json(
         { error: 'YouTube URL is required' },
-        { status: 400 }
+        { status: 400, headers }
       );
     }
 
@@ -17,17 +35,20 @@ export async function POST(request: NextRequest) {
     if (!videoId) {
       return NextResponse.json(
         { error: 'Invalid YouTube URL format' },
-        { status: 400 }
+        { status: 400, headers }
       );
     }
 
     try {
-      const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+      // Use the video ID directly with the YouTube API
+      const transcript = await YoutubeTranscript.fetchTranscript(videoId, {
+        lang: 'en' // Specify language preference
+      });
       
       if (!transcript || transcript.length === 0) {
         return NextResponse.json(
           { error: 'No transcript content available' },
-          { status: 404 }
+          { status: 404, headers }
         );
       }
 
@@ -38,35 +59,48 @@ export async function POST(request: NextRequest) {
         duration: segment.duration
       }));
 
-      return NextResponse.json({ transcript: formattedTranscript });
+      return NextResponse.json(
+        { transcript: formattedTranscript },
+        { headers }
+      );
     } catch (transcriptError: any) {
+      console.error('Transcript error details:', transcriptError);
+
       // Handle specific transcript errors
       if (transcriptError.message?.includes('Could not find any transcripts')) {
         return NextResponse.json(
           { error: 'This video does not have captions available. Please try a different video.' },
-          { status: 404 }
+          { status: 404, headers }
         );
       }
 
       if (transcriptError.message?.includes('Transcript is disabled')) {
         return NextResponse.json(
           { error: 'Captions are disabled for this video. Please try a different video.' },
-          { status: 403 }
+          { status: 403, headers }
         );
       }
 
       // Generic error handling
-      console.error('Transcript fetch error:', transcriptError);
       return NextResponse.json(
-        { error: 'Failed to fetch video captions. Please try again or use a different video.' },
-        { status: 500 }
+        { 
+          error: 'Failed to fetch video captions. Please try again or use a different video.',
+          details: transcriptError.message
+        },
+        { status: 500, headers }
       );
     }
   } catch (error) {
     console.error('General error:', error);
     return NextResponse.json(
-      { error: 'An unexpected error occurred. Please try again.' },
-      { status: 500 }
+      { 
+        error: 'An unexpected error occurred. Please try again.',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { 
+        status: 500,
+        headers: corsHeaders
+      }
     );
   }
 }
