@@ -39,20 +39,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    try {
-      // Use the video ID directly with the YouTube API
-      const transcript = await YoutubeTranscript.fetchTranscript(videoId, {
-        lang: 'en' // Specify language preference
-      });
-      
-      if (!transcript || transcript.length === 0) {
-        return NextResponse.json(
-          { error: 'No transcript content available' },
-          { status: 404, headers }
-        );
-      }
+    // Try different language codes and methods to get transcript
+    const languagesToTry = ['en', 'en-US', 'en-GB', 'auto'];
+    let transcript = null;
+    let lastError: Error | null = null;
 
-      // Transform the transcript to match our expected format
+    for (const lang of languagesToTry) {
+      try {
+        transcript = await YoutubeTranscript.fetchTranscript(videoId, {
+          lang
+        });
+
+        if (transcript && transcript.length > 0) {
+          break; // Successfully got transcript
+        }
+      } catch (error: any) {
+        lastError = error;
+        console.log(`Failed to fetch transcript with lang ${lang}:`, error.message);
+        continue; // Try next language
+      }
+    }
+
+    // If we got a transcript, return it
+    if (transcript && transcript.length > 0) {
       const formattedTranscript = transcript.map(segment => ({
         text: segment.text,
         start: segment.offset,
@@ -63,21 +72,19 @@ export async function POST(request: NextRequest) {
         { transcript: formattedTranscript },
         { headers }
       );
-    } catch (transcriptError: any) {
-      console.error('Transcript error details:', transcriptError);
+    }
 
-      // Handle specific transcript errors
-      if (transcriptError.message?.includes('Could not find any transcripts')) {
+    // If we get here, all attempts failed
+    if (lastError) {
+      // Handle specific error cases
+      if (lastError.message?.includes('Could not find any transcripts') ||
+          lastError.message?.includes('Transcript is disabled')) {
         return NextResponse.json(
-          { error: 'This video does not have captions available. Please try a different video.' },
+          { 
+            error: 'This video does not have available captions. Please try a different video.',
+            details: 'No captions found in any supported language'
+          },
           { status: 404, headers }
-        );
-      }
-
-      if (transcriptError.message?.includes('Transcript is disabled')) {
-        return NextResponse.json(
-          { error: 'Captions are disabled for this video. Please try a different video.' },
-          { status: 403, headers }
         );
       }
 
@@ -85,11 +92,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { 
           error: 'Failed to fetch video captions. Please try again or use a different video.',
-          details: transcriptError.message
+          details: lastError.message
         },
         { status: 500, headers }
       );
     }
+
+    // Fallback error if no transcript and no specific error
+    return NextResponse.json(
+      { 
+        error: 'No transcript available for this video.',
+        details: 'Could not find captions in any supported language'
+      },
+      { status: 404, headers }
+    );
+
   } catch (error) {
     console.error('General error:', error);
     return NextResponse.json(
