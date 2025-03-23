@@ -55,6 +55,34 @@ export default function AnalysisResults({ analysis, isLoading, videoId }: Analys
     return null;
   }
 
+  // Format the analysis content
+  let formattedContent = '';
+  try {
+    const parsedAnalysis = typeof analysis === 'string' ? JSON.parse(analysis) : analysis;
+    
+    if (parsedAnalysis && typeof parsedAnalysis === 'object') {
+      formattedContent = `# ${parsedAnalysis.topic || 'Analysis'}\n\n`;
+      
+      if (Array.isArray(parsedAnalysis.keyPoints)) {
+        formattedContent += '## Key Points\n\n';
+        parsedAnalysis.keyPoints.forEach((point: string) => {
+          formattedContent += `* ${point}\n`;
+        });
+        formattedContent += '\n';
+      }
+      
+      if (parsedAnalysis.summary) {
+        formattedContent += '## Summary\n\n';
+        formattedContent += parsedAnalysis.summary;
+      }
+    } else {
+      formattedContent = String(analysis);
+    }
+  } catch (error) {
+    console.error('Error formatting analysis:', error);
+    formattedContent = String(analysis);
+  }
+
   return (
     <div className="space-y-4 rounded-lg border bg-card text-card-foreground shadow-sm p-6 mt-6">
       <div className="flex justify-between items-center border-b pb-4">
@@ -62,7 +90,7 @@ export default function AnalysisResults({ analysis, isLoading, videoId }: Analys
         {videoId && (
           <SaveAnalysisButton 
             videoId={videoId} 
-            analysis={analysis} 
+            analysis={formattedContent} 
             onSaved={handleSaved} 
           />
         )}
@@ -70,9 +98,9 @@ export default function AnalysisResults({ analysis, isLoading, videoId }: Analys
       
       <div className="prose prose-neutral dark:prose-invert max-w-none prose-headings:font-semibold prose-headings:text-foreground prose-p:text-card-foreground/80 prose-li:text-card-foreground/80 prose-strong:text-foreground prose-h2:text-xl prose-h3:text-lg prose-h2:mt-6 prose-h3:mt-4 prose-p:leading-relaxed prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-li:my-1">
         <ReactMarkdown>
-          {analysis}
+          {formattedContent}
         </ReactMarkdown>
       </div>
     </div>
   );
-} 
+}
