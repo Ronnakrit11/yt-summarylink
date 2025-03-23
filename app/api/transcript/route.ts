@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { YoutubeTranscript } from 'youtube-transcript';
 
@@ -12,82 +11,122 @@ export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
-export async function POST(request: NextRequest) {
-  const responseHeaders = {
-    ...corsHeaders,
-    'Content-Type': 'application/json',
-  };
+async function fetchTranscriptWithRetry(url: string, options: any = {}, retries = 3): Promise<any> {
+  let lastError;
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const transcript = await YoutubeTranscript.fetchTranscript(url, options);
+      if (transcript && transcript.length > 0) {
+        return transcript;
+      }
+    } catch (error) {
+      lastError = error;
+      // Wait for a short time before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+    }
+  }
+  
+  throw lastError;
+}
 
+export async function POST(request: NextRequest) {
   try {
+    const headers = {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+    };
+
     const { videoUrl } = await request.json();
     
     if (!videoUrl) {
       return NextResponse.json(
         { error: 'YouTube URL is required' },
-        { status: 400, headers: responseHeaders }
+        { status: 400, headers }
       );
     }
 
-    // First try to get the video ID
+    // Extract video ID
     const videoId = extractVideoId(videoUrl);
     if (!videoId) {
       return NextResponse.json(
         { error: 'Invalid YouTube URL format' },
-        { status: 400, headers: responseHeaders }
+        { status: 400, headers }
       );
     }
 
     // Create the full YouTube URL
     const fullUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-    // Try to fetch transcript with different approaches
-    let transcript = null;
-    const options = [
-      { lang: 'th' },
-      { lang: 'en' },
-      {} // Default/auto-detect
+    // Define language options to try
+    const languageOptions = [
+      { lang: 'th' },      // Try Thai first
+      { lang: 'en' },      // Then English
+      { lang: 'auto' },    // Then auto-detect
+      {}                   // Finally, default options
     ];
 
-    for (const opt of options) {
-      try {
-        // Use the full URL instead of just the ID
-        transcript = await YoutubeTranscript.fetchTranscript(fullUrl, opt);
-        if (transcript && transcript.length > 0) {
-          // Format and return successful transcript
-          const formattedTranscript = transcript.map(segment => ({
-            text: segment.text,
-            start: segment.offset,
-            duration: segment.duration
-          }));
+    let successfulTranscript = null;
+    let errors = [];
 
-          return NextResponse.json(
-            { transcript: formattedTranscript },
-            { headers: responseHeaders }
-          );
+    // Try each language option
+    for (const options of languageOptions) {
+      try {
+        const transcript = await fetchTranscriptWithRetry(fullUrl, options);
+        if (transcript && transcript.length > 0) {
+          successfulTranscript = transcript;
+          break;
         }
-      } catch (err) {
-        console.log(`Attempt failed with options ${JSON.stringify(opt)}:`, (err as Error).message);
-        continue; // Try next option
+      } catch (error) {
+        errors.push({
+          lang: options.lang || 'default',
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        continue;
       }
+    }
+
+    interface TranscriptSegment {
+      text: string;
+      offset: number;
+      duration: number;
+    }
+
+    if (successfulTranscript) {
+      const formattedTranscript = successfulTranscript.map((segment: TranscriptSegment) => ({
+        text: segment.text,
+        start: segment.offset,
+        duration: segment.duration
+      }));
+
+      return NextResponse.json(
+        { transcript: formattedTranscript },
+        { headers }
+      );
     }
 
     // If we get here, all attempts failed
     return NextResponse.json(
       { 
         error: 'No transcript available for this video. Please try a different video.',
-        details: 'Could not find captions in any supported language'
+        details: 'Could not find captions in any supported language',
+        attempts: errors
       },
-      { status: 404, headers: responseHeaders }
+      { status: 404, headers }
     );
 
   } catch (error) {
     console.error('General error:', error);
+    const headers = {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+    };
     return NextResponse.json(
       { 
         error: 'An unexpected error occurred while fetching the transcript.',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
-      { status: 500, headers: responseHeaders }
+      { status: 500, headers }
     );
   }
 }
