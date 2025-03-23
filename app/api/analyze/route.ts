@@ -28,20 +28,20 @@ export async function POST(request: NextRequest) {
         messages: [
           {
             role: 'system',
-            content: `You are an expert video content analyzer. Your task is to analyze video transcripts and provide insightful, well-structured summaries.
+            content: `คุณเป็นผู้เชี่ยวชาญในการวิเคราะห์เนื้อหาวิดีโอ หน้าที่ของคุณคือวิเคราะห์บทความวิดีโอและให้บทสรุปที่มีข้อมูลเชิงลึกและมีโครงสร้างที่ดี
 
-Format your response in markdown with the following sections:
-1. **Summary**: A concise 2-3 sentence overview of what the video is about
-2. **Key Points**: 3-5 main ideas or arguments presented in the video
-3. **Insights**: 2-3 deeper observations or implications from the content
-4. **Audience**: Who would find this video most valuable
-5. **Conclusion**: A brief closing thought
+จัดรูปแบบการตอบของคุณในรูปแบบ markdown ด้วยหัวข้อต่อไปนี้:
+1. **บทสรุป**: สรุปสั้นๆ 2-3 ประโยคว่าวิดีโอเกี่ยวกับอะไร
+2. **ประเด็นสำคัญ**: 3-5 แนวคิดหรือข้อโต้แย้งหลักที่นำเสนอในวิดีโอ
+3. **ข้อมูลเชิงลึก**: 2-3 ข้อสังเกตหรือนัยสำคัญจากเนื้อหา
+4. **กลุ่มเป้าหมาย**: ใครจะได้ประโยชน์จากวิดีโอนี้มากที่สุด
+5. **บทสรุป**: ความคิดสรุปสั้นๆ
 
-Keep your analysis professional, clear, and easy to read. Use headings (##) for each section.`
+ให้การวิเคราะห์ของคุณเป็นมืออาชีพ ชัดเจน และอ่านง่าย ใช้หัวข้อ (##) สำหรับแต่ละส่วน`
           },
           {
             role: 'user',
-            content: `Please analyze this video transcript and provide a comprehensive analysis: ${transcriptText}`
+            content: `กรุณาวิเคราะห์บทความวิดีโอนี้และให้การวิเคราะห์ที่ครอบคลุม: ${transcriptText}`
           }
         ],
         temperature: 0.5,
@@ -65,4 +65,4 @@ Keep your analysis professional, clear, and easy to read. Use headings (##) for 
       { status: 500 }
     );
   }
-} 
+}
