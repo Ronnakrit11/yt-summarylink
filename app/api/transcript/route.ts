@@ -1,37 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { YoutubeTranscript } from 'youtube-transcript';
 
+// Configure CORS
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+// Handle OPTIONS request for CORS
 export async function OPTIONS() {
   return NextResponse.json({}, { headers: corsHeaders });
 }
 
-async function fetchTranscriptWithRetry(url: string, options: any = {}, retries = 3): Promise<any> {
-  let lastError;
-  
-  for (let i = 0; i < retries; i++) {
-    try {
-      const transcript = await YoutubeTranscript.fetchTranscript(url, options);
-      if (transcript && transcript.length > 0) {
-        return transcript;
-      }
-    } catch (error) {
-      lastError = error;
-      // Wait for a short time before retrying
-      await new Promise(resolve => setTimeout(resolve, 3000 * (i + 1)));
-    }
-  }
-  
-  throw lastError;
-}
-
 export async function POST(request: NextRequest) {
   try {
+    // Add CORS headers to the response
     const headers = {
       ...corsHeaders,
       'Content-Type': 'application/json',
@@ -46,7 +30,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract video ID
+    // Extract video ID from URL
     const videoId = extractVideoId(videoUrl);
     if (!videoId) {
       return NextResponse.json(
@@ -55,45 +39,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the full YouTube URL
-    const fullUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    // Try different language codes and methods to get transcript
+    const languagesToTry = ['th', 'th-TH', 'en', 'en-US', 'en-GB', 'auto'];
+    let transcript = null;
+    let lastError = null;
 
-    // Define language options to try
-    const languageOptions = [
-      { lang: 'th' },      // Try Thai first
-      { lang: 'en' },      // Then English
-      { lang: 'auto' },    // Then auto-detect
-      {}                   // Finally, default options
-    ];
-
-    let successfulTranscript = null;
-    let errors = [];
-
-    // Try each language option
-    for (const options of languageOptions) {
+    for (const lang of languagesToTry) {
       try {
-        const transcript = await fetchTranscriptWithRetry(fullUrl, options);
+        transcript = await YoutubeTranscript.fetchTranscript(videoId, {
+          lang
+        });
+
         if (transcript && transcript.length > 0) {
-          successfulTranscript = transcript;
-          break;
+          break; // Successfully got transcript
         }
       } catch (error) {
-        errors.push({
-          lang: options.lang || 'default',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-        continue;
+        lastError = error as Error;
+        console.log(`Failed to fetch transcript with lang ${lang}:`, error instanceof Error ? error.message : String(error));
+        continue; // Try next language
       }
     }
 
-    interface TranscriptSegment {
-      text: string;
-      offset: number;
-      duration: number;
-    }
-
-    if (successfulTranscript) {
-      const formattedTranscript = successfulTranscript.map((segment: TranscriptSegment) => ({
+    // If we got a transcript, return it
+    if (transcript && transcript.length > 0) {
+      const formattedTranscript = transcript.map(segment => ({
         text: segment.text,
         start: segment.offset,
         duration: segment.duration
@@ -106,34 +75,56 @@ export async function POST(request: NextRequest) {
     }
 
     // If we get here, all attempts failed
+    if (lastError) {
+      // Handle specific error cases
+      if (lastError.message?.includes('Could not find any transcripts') ||
+          lastError.message?.includes('Transcript is disabled')) {
+        return NextResponse.json(
+          { 
+            error: 'This video does not have available captions. Please try a different video.',
+            details: 'No captions found in any supported language'
+          },
+          { status: 404, headers }
+        );
+      }
+
+      // Generic error handling
+      return NextResponse.json(
+        { 
+          error: 'Failed to fetch video captions. Please try again or use a different video.',
+          details: lastError.message
+        },
+        { status: 500, headers }
+      );
+    }
+
+    // Fallback error if no transcript and no specific error
     return NextResponse.json(
       { 
-        error: 'No transcript available for this video. Please try a different video.',
-        details: 'Could not find captions in any supported language',
-        attempts: errors
+        error: 'No transcript available for this video.',
+        details: 'Could not find captions in any supported language'
       },
       { status: 404, headers }
     );
 
   } catch (error) {
     console.error('General error:', error);
-    const headers = {
-      ...corsHeaders,
-      'Content-Type': 'application/json',
-    };
     return NextResponse.json(
       { 
-        error: 'An unexpected error occurred while fetching the transcript.',
+        error: 'An unexpected error occurred. Please try again.',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
-      { status: 500, headers }
+      { 
+        status: 500,
+        headers: corsHeaders
+      }
     );
   }
 }
 
 function extractVideoId(url: string): string | null {
   try {
-    // Handle various YouTube URL formats
+    // Handle different YouTube URL formats
     const patterns = [
       /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i,
       /^[a-zA-Z0-9_-]{11}$/
@@ -146,7 +137,7 @@ function extractVideoId(url: string): string | null {
       }
     }
 
-    // Handle direct video ID input
+    // If it's already a video ID (11 characters)
     if (url.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(url)) {
       return url;
     }
