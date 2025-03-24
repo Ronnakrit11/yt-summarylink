@@ -23,7 +23,7 @@ async function fetchTranscriptWithRetry(url: string, options: any = {}, retries 
     } catch (error) {
       lastError = error;
       // Wait for a short time before retrying
-      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      await new Promise(resolve => setTimeout(resolve, 3000 * (i + 1)));
     }
   }
   
