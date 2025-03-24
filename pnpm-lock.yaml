@@ -62,9 +62,9 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.0.15)
-      youtube-transcript:
-        specifier: ^1.2.1
-        version: 1.2.1
+      youtubei.js:
+        specifier: ^13.1.0
+        version: 13.2.0
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3
@@ -102,6 +102,9 @@ packages:
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
+
+  '@bufbuild/protobuf@2.2.5':
+    resolution: {integrity: sha512-/g5EzJifw5GF8aren8wZ/G5oMuPoGeS6MQD3ca8ddcvdXR5UELUfdTZITCGNhNXynY/AYl3Z4plmxdj/tRl/hQ==}
 
   '@clerk/backend@1.25.5':
     resolution: {integrity: sha512-nnBpr7oSq5iATWRExuljEfp7xa90KE1OUgaGCSmtZYF0T9TWHGkZHYqkQhD4XjiqlR2XsrsQ/UzPfmHM1Km7+Q==}
@@ -334,6 +337,10 @@ packages:
   '@eslint/plugin-kit@0.2.7':
     resolution: {integrity: sha512-JubJ5B2pJ4k4yGxaNLdbjrnk9d/iDz6/q8wOilpIowd6PJPgaxCuHBnBszq7Ce2TyMrywm5r4PnKm6V3iiZF+g==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+
+  '@fastify/busboy@2.1.1':
+    resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
+    engines: {node: '>=14'}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -1573,6 +1580,9 @@ packages:
     resolution: {integrity: sha512-H0dkQoCa3b2VEeKQBOxFph+JAbcrQdE7KC0UkqwpLmv2EC4P41QXP+rqo9wYodACiG5/WM5s9oDApTU8utwj9g==}
     engines: {node: '>= 0.4'}
 
+  jintr@3.2.1:
+    resolution: {integrity: sha512-yjKUBuwTTg4nc4izMysxuIk0BKh45hnbc1KnXE6LxagIGZn5od+I2elpuRY9IIm3EiKiUZxhxV89a0iX+xoEZg==}
+
   jiti@2.4.2:
     resolution: {integrity: sha512-rg9zJN+G4n2nfJl5MW3BMygZX56zKPNVEYYqq7adpmMh4Jn2QNEwhvQlFy6jPVdcod7txZtKHWnyZiA3a0zP7A==}
     hasBin: true
@@ -2324,6 +2334,10 @@ packages:
   undici-types@6.20.0:
     resolution: {integrity: sha512-Ny6QZ2Nju20vw1SRHe3d9jVu6gJ+4e3+MMpqu7pqE5HT6WsTSlce++GQmK5UXS8mzV8DSYHrQH+Xrf2jVcuKNg==}
 
+  undici@5.29.0:
+    resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
+    engines: {node: '>=14.0'}
+
   unified@11.0.5:
     resolution: {integrity: sha512-xKvGhPWw3k84Qjh8bI3ZeJjqnyadK+GEFtazSfZv/rKeTkTjOJho6mFqh2SM96iIcZokxiOpg78GazTSg8+KHA==}
 
@@ -2400,9 +2414,8 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  youtube-transcript@1.2.1:
-    resolution: {integrity: sha512-TvEGkBaajKw+B6y91ziLuBLsa5cawgowou+Bk0ciGpjELDfAzSzTGXaZmeSSkUeknCPpEr/WGApOHDwV7V+Y9Q==}
-    engines: {node: '>=18.0.0'}
+  youtubei.js@13.2.0:
+    resolution: {integrity: sha512-esbSvWS12Dz/cVlHhnL/PSE84a/mVpQdzwPDIkRQu/NHJVxv0isBUcm3hJnYB1jg1LYvomV0YeOrYv5qWwJREA==}
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
@@ -2410,6 +2423,8 @@ packages:
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
+
+  '@bufbuild/protobuf@2.2.5': {}
 
   '@clerk/backend@1.25.5(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
@@ -2592,6 +2607,8 @@ snapshots:
     dependencies:
       '@eslint/core': 0.12.0
       levn: 0.4.1
+
+  '@fastify/busboy@2.1.1': {}
 
   '@humanfs/core@0.19.1': {}
 
@@ -3981,6 +3998,10 @@ snapshots:
       has-symbols: 1.1.0
       set-function-name: 2.0.2
 
+  jintr@3.2.1:
+    dependencies:
+      acorn: 8.14.1
+
   jiti@2.4.2: {}
 
   js-cookie@3.0.5: {}
@@ -4964,6 +4985,10 @@ snapshots:
 
   undici-types@6.20.0: {}
 
+  undici@5.29.0:
+    dependencies:
+      '@fastify/busboy': 2.1.1
+
   unified@11.0.5:
     dependencies:
       '@types/unist': 3.0.3
@@ -5082,6 +5107,11 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  youtube-transcript@1.2.1: {}
+  youtubei.js@13.2.0:
+    dependencies:
+      '@bufbuild/protobuf': 2.2.5
+      jintr: 3.2.1
+      tslib: 2.8.1
+      undici: 5.29.0
 
   zwitch@2.0.4: {}

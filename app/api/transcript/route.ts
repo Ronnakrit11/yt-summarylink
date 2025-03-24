@@ -1,150 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { YoutubeTranscript } from 'youtube-transcript';
-
-// Configure CORS
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-// Handle OPTIONS request for CORS
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
-}
+import { Innertube } from 'youtubei.js/web';
 
 export async function POST(request: NextRequest) {
   try {
-    // Add CORS headers to the response
-    const headers = {
-      ...corsHeaders,
-      'Content-Type': 'application/json',
-    };
-
     const { videoUrl } = await request.json();
     
     if (!videoUrl) {
       return NextResponse.json(
-        { error: 'YouTube URL is required' },
-        { status: 400, headers }
+        { error: 'Video URL is required' },
+        { status: 400 }
       );
     }
 
-    // Extract video ID from URL
-    const videoId = extractVideoId(videoUrl);
-    if (!videoId) {
+    // Extract video ID from YouTube URL
+    const videoIdMatch = videoUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+    
+    if (!videoIdMatch || !videoIdMatch[1]) {
       return NextResponse.json(
-        { error: 'Invalid YouTube URL format' },
-        { status: 400, headers }
+        { error: 'Invalid YouTube URL' },
+        { status: 400 }
       );
     }
+    
+    const videoId = videoIdMatch[1];
+    
+    // Initialize Innertube
+    const youtube = await Innertube.create({
+      lang: 'en',
+      location: 'US',
+      retrieve_player: false,
+    });
 
-    // Try different language codes and methods to get transcript
-    const languagesToTry = ['th', 'th-TH', 'en', 'en-US', 'en-GB', 'auto'];
-    let transcript = null;
-    let lastError = null;
-
-    for (const lang of languagesToTry) {
+    // Get video info
+    const info = await youtube.getInfo(videoId);
+    
+    // Fetch transcript
+    const fetchTranscript = async () => {
       try {
-        transcript = await YoutubeTranscript.fetchTranscript(videoId, {
-          lang
-        });
-
-        if (transcript && transcript.length > 0) {
-          break; // Successfully got transcript
-        }
+        const transcriptData = await info.getTranscript();
+        return transcriptData.transcript.content.body.initial_segments.map((segment) => ({
+          text: segment.snippet.text,
+          start: segment.start_ms / 1000, // Convert ms to seconds
+          duration: (segment.end_ms - segment.start_ms) / 1000 // Convert ms to seconds
+        }));
       } catch (error) {
-        lastError = error as Error;
-        console.log(`Failed to fetch transcript with lang ${lang}:`, error instanceof Error ? error.message : String(error));
-        continue; // Try next language
+        console.error('Error fetching transcript:', error);
+        throw error;
       }
-    }
+    };
 
-    // If we got a transcript, return it
-    if (transcript && transcript.length > 0) {
-      const formattedTranscript = transcript.map(segment => ({
-        text: segment.text,
-        start: segment.offset,
-        duration: segment.duration
-      }));
+    const transcript = await fetchTranscript();
 
+    if (!transcript || transcript.length === 0) {
       return NextResponse.json(
-        { transcript: formattedTranscript },
-        { headers }
+        { error: 'Failed to fetch transcript or transcript not available' },
+        { status: 404 }
       );
     }
 
-    // If we get here, all attempts failed
-    if (lastError) {
-      // Handle specific error cases
-      if (lastError.message?.includes('Could not find any transcripts') ||
-          lastError.message?.includes('Transcript is disabled')) {
-        return NextResponse.json(
-          { 
-            error: 'This video does not have available captions. Please try a different video.',
-            details: 'No captions found in any supported language'
-          },
-          { status: 404, headers }
-        );
-      }
-
-      // Generic error handling
-      return NextResponse.json(
-        { 
-          error: 'Failed to fetch video captions. Please try again or use a different video.',
-          details: lastError.message
-        },
-        { status: 500, headers }
-      );
-    }
-
-    // Fallback error if no transcript and no specific error
-    return NextResponse.json(
-      { 
-        error: 'No transcript available for this video.',
-        details: 'Could not find captions in any supported language'
-      },
-      { status: 404, headers }
-    );
-
+    return NextResponse.json({ transcript });
   } catch (error) {
-    console.error('General error:', error);
+    console.error('Error fetching transcript:', error);
     return NextResponse.json(
-      { 
-        error: 'An unexpected error occurred. Please try again.',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { 
-        status: 500,
-        headers: corsHeaders
-      }
+      { error: 'Failed to fetch transcript' },
+      { status: 500 }
     );
   }
-}
-
-function extractVideoId(url: string): string | null {
-  try {
-    // Handle different YouTube URL formats
-    const patterns = [
-      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i,
-      /^[a-zA-Z0-9_-]{11}$/
-    ];
-
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match && match[1]) {
-        return match[1];
-      }
-    }
-
-    // If it's already a video ID (11 characters)
-    if (url.length === 11 && /^[a-zA-Z0-9_-]{11}$/.test(url)) {
-      return url;
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Error extracting video ID:', error);
-    return null;
-  }
-}
+} 
